@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bayfall Morrigan | Standard Yield Contract Simulator</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:      #f9f8f6;
+  --surface: #ffffff;
+  --sidebar: #f2f0ec;
+  --black:   #0e0e0c;
+  --mid:     #7a7670;
+  --rule:    #dedad4;
+  --rule-dark: #c8c4bc;
+  --green:   #7aab8a;
+  --green-dim: rgba(122,171,138,0.14);
+  --yellow:  #c8b96a;
+  --yellow-dim: rgba(200,185,106,0.14);
+  --display: 'Cormorant Garamond', Georgia, serif;
+  --body:    'EB Garamond', Georgia, serif;
+}
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--black);
+  font-family: var(--body);
+  font-size: 17px;
+  line-height: 1.8;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+/* NAV */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  background: var(--surface);
+  border-bottom: 1px solid var(--rule);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 64px; height: 72px;
+}
+.nav-brand {
+  font-family: var(--display);
+  font-size: 20px; font-weight: 400; letter-spacing: 0.08em;
+  color: var(--black); text-decoration: none;
+}
+.nav-label {
+  font-family: var(--body); font-size: 10px;
+  letter-spacing: 0.22em; text-transform: uppercase; color: var(--mid);
+}
+
+/* LAYOUT */
+.layout {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  min-height: 100vh;
+  padding-top: 72px;
+}
+
+/* SIDEBAR */
+.sidebar {
+  background: var(--sidebar);
+  border-right: 1px solid var(--rule);
+  padding: 56px 40px;
+  height: calc(100vh - 72px);
+  position: sticky; top: 72px;
+  overflow-y: auto;
+}
+.sidebar-header {
+  margin-bottom: 48px; padding-bottom: 32px;
+  border-bottom: 1px solid var(--rule-dark);
+}
+.sidebar-eyebrow {
+  font-family: var(--body); font-size: 10px;
+  letter-spacing: 0.22em; text-transform: uppercase;
+  color: var(--green); margin-bottom: 16px;
+}
+.sidebar-title {
+  font-family: var(--display); font-size: 28px;
+  font-weight: 300; line-height: 1.2; color: var(--black);
+  letter-spacing: 0.02em;
+}
+.sidebar-title em { font-style: italic; }
+
+/* FORM */
+.form-grid { display: flex; flex-direction: column; gap: 28px; }
+.form-group { display: flex; flex-direction: column; gap: 8px; }
+.form-label {
+  font-family: var(--body); font-size: 10px;
+  letter-spacing: 0.2em; text-transform: uppercase; color: var(--mid);
+}
+.form-input, .form-select {
+  background: transparent; border: none;
+  border-bottom: 1px solid var(--rule-dark);
+  color: var(--black);
+  font-family: var(--display); font-size: 22px; font-weight: 300;
+  padding: 8px 0; width: 100%;
+  transition: border-color 0.3s; outline: none; -webkit-appearance: none;
+}
+.form-input:focus, .form-select:focus { border-color: var(--green); }
+.form-select option { background: var(--surface); color: var(--black); }
+.form-hint { font-size: 12px; color: var(--mid); font-style: italic; }
+.form-divider { height: 1px; background: var(--rule); margin: 4px 0; }
+
+/* MAIN */
+.main { padding: 56px 64px; background: var(--bg); }
+.section-eyebrow {
+  font-family: var(--body); font-size: 10px;
+  letter-spacing: 0.22em; text-transform: uppercase;
+  color: var(--green); margin-bottom: 40px;
+}
+
+/* STATS */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px; background: var(--rule);
+  border: 1px solid var(--rule);
+  margin-bottom: 56px;
+}
+.stat-item { background: var(--surface); padding: 28px 24px; }
+.stat-item.accent-item { background: rgba(122,171,138,0.07); }
+.stat-label {
+  font-family: var(--body); font-size: 10px;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--mid); margin-bottom: 8px;
+}
+.stat-value {
+  font-family: var(--display); font-size: 26px;
+  font-weight: 300; color: var(--black); letter-spacing: 0.02em;
+}
+.stat-value.green { color: var(--green); }
+.stat-value.yellow { color: #9a8a3a; }
+
+/* CHARTS */
+.charts-row {
+  display: grid; grid-template-columns: 1fr 360px;
+  gap: 40px; margin-bottom: 48px;
+}
+.chart-panel {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  padding: 36px 36px 40px;
+}
+.chart-panel-title {
+  font-family: var(--display); font-size: 12px;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--mid); margin-bottom: 8px;
+}
+.chart-panel-sub {
+  font-family: var(--body); font-size: 13px;
+  color: var(--mid); font-style: italic;
+  margin-bottom: 24px;
+}
+.chart-wrap-line { position: relative; height: 340px; }
+.chart-wrap-donut { position: relative; height: 280px; }
+
+/* CENTER CALLOUT in donut */
+.donut-wrap {
+  position: relative;
+}
+.donut-center {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -58%);
+  text-align: center; pointer-events: none;
+}
+.donut-center-value {
+  font-family: var(--display); font-size: 32px; font-weight: 300;
+  color: var(--black); line-height: 1;
+}
+.donut-center-label {
+  font-family: var(--body); font-size: 11px;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--mid); margin-top: 4px;
+}
+
+/* LEGEND manual */
+.chart-legend {
+  display: flex; gap: 24px; margin-top: 20px; justify-content: center;
+}
+.legend-item {
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--body); font-size: 13px; color: var(--mid);
+}
+.legend-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* SCROLLBAR */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--rule-dark); }
+
+@media (max-width: 1100px) {
+  .layout { grid-template-columns: 1fr; }
+  .sidebar { height: auto; position: static; }
+  .charts-row { grid-template-columns: 1fr; }
+  .stats-grid { grid-template-columns: repeat(2,1fr); }
+  nav { padding: 0 24px; }
+  .main { padding: 40px 24px; }
+  .sidebar { padding: 40px 24px; }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-brand" href="#">Bayfall Morrigan</a>
+  <span class="nav-label">Proprietary Material</span>
+</nav>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-eyebrow">Contract Parameters</div>
+      <h1 class="sidebar-title">Standard Private<br><em>High-Yield Loan</em></h1>
+    </div>
+    <form id="simForm" class="form-grid">
+      <div class="form-group">
+        <label class="form-label">Initial Deposit</label>
+        <input class="form-input" type="number" id="deposit" min="0" step="0.01" value="10000">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Origination Fee (%)</label>
+        <input class="form-input" type="number" id="fee" min="0" max="100" step="0.01" value="6.5">
+      </div>
+      <div class="form-divider"></div>
+      <div class="form-group">
+        <label class="form-label">Monthly Yield (%)</label>
+        <input class="form-input" type="number" id="yield" min="0" step="0.01" value="6.5">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Duration</label>
+        <select class="form-select" id="length">
+          <option value="3">3 Months</option>
+          <option value="6" selected>6 Months</option>
+          <option value="12">12 Months</option>
+        </select>
+      </div>
+      <div class="form-divider"></div>
+      <div class="form-group">
+        <label class="form-label">Start Date</label>
+        <input class="form-input" type="date" id="startDate" value="2025-03-01">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Settlement Days</label>
+        <input class="form-input" type="number" id="settlementDays" min="0" max="27" step="1" value="7">
+        <span class="form-hint">Dead period before first compounding cycle</span>
+      </div>
+    </form>
+  </aside>
+
+  <main class="main">
+    <div class="section-eyebrow">Contract Summary</div>
+
+    <div class="stats-grid" id="stats">
+      <div class="stat-item"><div class="stat-label">Starting Balance</div><div class="stat-value">—</div></div>
+      <div class="stat-item"><div class="stat-label">Final Balance</div><div class="stat-value">—</div></div>
+      <div class="stat-item"><div class="stat-label">Total Return</div><div class="stat-value">—</div></div>
+    </div>
+
+    <div class="charts-row">
+      <!-- STACKED AREA: principal floor + yield on top -->
+      <div class="chart-panel">
+        <div class="chart-panel-title">Balance Composition — Weekly</div>
+        <div class="chart-panel-sub">Principal floor (after fee) with yield accumulation stacked above</div>
+        <div class="chart-wrap-line">
+          <canvas id="stackedChart"></canvas>
+        </div>
+        <div class="chart-legend" id="stackedLegend">
+          <div class="legend-item"><div class="legend-dot" style="background:var(--yellow)"></div>Principal</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>Yield Earned</div>
+        </div>
+      </div>
+
+      <!-- HALF-DONUT GAUGE -->
+      <div class="chart-panel">
+        <div class="chart-panel-title">Return on Initial Deposit</div>
+        <div class="chart-panel-sub">Yield as a share of your original capital</div>
+        <div class="donut-wrap">
+          <div class="chart-wrap-donut">
+            <canvas id="gaugeChart"></canvas>
+          </div>
+          <div class="donut-center" id="donutCenter">
+            <div class="donut-center-value" id="donutReturnPct">—</div>
+            <div class="donut-center-label">Total Return</div>
+          </div>
+        </div>
+        <div class="chart-legend">
+          <div class="legend-item"><div class="legend-dot" style="background:var(--yellow)"></div>Principal</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>Yield</div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+Chart.defaults.color = '#7a7670';
+Chart.defaults.font.family = "'EB Garamond', Georgia, serif";
+Chart.defaults.font.size = 13;
+
+const GREEN       = '#7aab8a';
+const GREEN_SOLID = 'rgba(122,171,138,0.7)';
+const GREEN_DIM   = 'rgba(122,171,138,0.18)';
+const YELLOW      = '#c8b96a';
+const YELLOW_SOLID= 'rgba(200,185,106,0.55)';
+const YELLOW_DIM  = 'rgba(200,185,106,0.18)';
+const TT = { backgroundColor: '#fff', borderColor: '#dedad4', borderWidth: 1, titleColor: '#0e0e0c', bodyColor: '#7a7670' };
+
+// STACKED AREA CHART — principal layer + yield layer
+const stackedChart = new Chart(document.getElementById('stackedChart'), {
+  type: 'line',
+  data: { labels: [], datasets: [] },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
+    scales: {
+      x: {
+        grid: { color: 'rgba(0,0,0,0.04)' },
+        ticks: { maxTicksLimit: 10, color: '#7a7670' }
+      },
+      y: {
+        stacked: true,
+        grid: { color: 'rgba(0,0,0,0.05)' },
+        ticks: {
+          color: '#7a7670',
+          callback: v => '$' + v.toLocaleString()
+        }
+      }
+    },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        ...TT,
+        callbacks: {
+          label: ctx => {
+            const label = ctx.dataset.label;
+            const val = (ctx.raw||0).toLocaleString(undefined,{minimumFractionDigits:2});
+            return `${label}: $${val}`;
+          },
+          footer: (items) => {
+            const total = items.reduce((s,i) => s + (i.raw||0), 0);
+            return `Total: $${total.toLocaleString(undefined,{minimumFractionDigits:2})}`;
+          }
+        }
+      }
+    }
+  }
+});
+
+// HALF-DONUT GAUGE
+const gaugeChart = new Chart(document.getElementById('gaugeChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Principal', 'Yield Earned'],
+    datasets: [{
+      data: [1, 0],
+      backgroundColor: [YELLOW, GREEN],
+      borderWidth: 0,
+      borderRadius: 2
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    rotation: -90, circumference: 180,
+    cutout: '72%',
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        ...TT,
+        callbacks: {
+          label: ctx => `${ctx.label}: $${(ctx.raw||0).toLocaleString(undefined,{minimumFractionDigits:2})}`
+        }
+      }
+    }
+  }
+});
+
+function run() {
+  const deposit       = parseFloat(document.getElementById('deposit').value) || 0;
+  const feePct        = parseFloat(document.getElementById('fee').value) || 0;
+  const months        = parseInt(document.getElementById('length').value) || 6;
+  const yieldPct      = parseFloat(document.getElementById('yield').value) || 0;
+  const settlementDays= parseInt(document.getElementById('settlementDays').value) || 0;
+
+  if (deposit <= 0) return;
+
+  const originationFee  = deposit * (feePct / 100);
+  const startingBalance = deposit - originationFee;
+  let balance = startingBalance;
+
+  const labels     = ['Week 0'];
+  const principals = [startingBalance]; // flat principal layer
+  const yields     = [0];               // yield layer on top
+
+  // Settlement dead period
+  if (settlementDays > 0) {
+    const sw = Math.ceil(settlementDays / 7);
+    for (let w = 1; w <= sw; w++) {
+      labels.push(`Wk ${w} (setup)`);
+      principals.push(startingBalance);
+      yields.push(0);
+    }
+  }
+
+  // Compounding: 4 weeks elapse, compound fires at end of week 4
+  for (let m = 1; m <= months; m++) {
+    for (let w = 1; w <= 4; w++) {
+      if (w === 4) balance += balance * (yieldPct / 100);
+      const weekNum = labels.length;
+      let lbl = `Wk ${weekNum}`;
+      if (w === 4) lbl += ` ✦M${m}`;
+      labels.push(lbl);
+      principals.push(startingBalance);              // principal is always flat
+      yields.push(Math.max(0, balance - startingBalance)); // yield grows on top
+    }
+  }
+
+  const totalYield    = balance - startingBalance;
+  const totalReturnPct= ((balance - deposit) / deposit) * 100;
+
+  // Update stacked chart
+  stackedChart.data.labels = labels;
+  stackedChart.data.datasets = [
+    {
+      label: 'Principal',
+      data: principals,
+      backgroundColor: YELLOW_SOLID,
+      borderColor: YELLOW,
+      borderWidth: 1,
+      fill: true,
+      tension: 0,
+      pointRadius: 0,
+      stack: 'balance'
+    },
+    {
+      label: 'Yield Earned',
+      data: yields,
+      backgroundColor: GREEN_SOLID,
+      borderColor: GREEN,
+      borderWidth: 1,
+      fill: true,
+      tension: 0.3,
+      pointRadius: 0,
+      stack: 'balance'
+    }
+  ];
+  stackedChart.update();
+
+  // Update half-donut gauge
+  gaugeChart.data.datasets[0].data = [startingBalance, totalYield];
+  gaugeChart.update();
+  document.getElementById('donutReturnPct').textContent = totalReturnPct.toFixed(1) + '%';
+
+  // Stats
+  document.getElementById('stats').innerHTML = `
+    <div class="stat-item">
+      <div class="stat-label">Original Deposit</div>
+      <div class="stat-value">$${deposit.toLocaleString(undefined,{minimumFractionDigits:2})}</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-label">Origination Fee (${feePct}%)</div>
+      <div class="stat-value yellow">−$${originationFee.toLocaleString(undefined,{minimumFractionDigits:2})}</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-label">Starting Balance</div>
+      <div class="stat-value">$${startingBalance.toLocaleString(undefined,{minimumFractionDigits:2})}</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-label">Monthly Yield</div>
+      <div class="stat-value">${yieldPct.toFixed(2)}%</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-label">Compounding Periods</div>
+      <div class="stat-value">${months}</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-label">Settlement Days</div>
+      <div class="stat-value">${settlementDays}</div>
+    </div>
+    <div class="stat-item accent-item">
+      <div class="stat-label">Final Balance</div>
+      <div class="stat-value green">$${balance.toLocaleString(undefined,{minimumFractionDigits:2})}</div>
+    </div>
+    <div class="stat-item accent-item">
+      <div class="stat-label">Total Yield Earned</div>
+      <div class="stat-value green">$${totalYield.toLocaleString(undefined,{minimumFractionDigits:2})}</div>
+    </div>
+    <div class="stat-item accent-item">
+      <div class="stat-label">Total Return on Deposit</div>
+      <div class="stat-value green">${totalReturnPct.toFixed(2)}%</div>
+    </div>
+  `;
+}
+
+document.getElementById('simForm').addEventListener('input', run);
+run();
+</script>
+</body>
+</html>
