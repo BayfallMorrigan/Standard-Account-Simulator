@@ -221,6 +221,11 @@ nav {
     </div>
     <form id="simForm" class="form-grid">
       <div class="form-group">
+        <label class="form-label">Client Name</label>
+        <input class="form-input" type="text" id="clientName" placeholder="Full Name">
+      </div>
+      <div class="form-divider"></div>
+      <div class="form-group">
         <label class="form-label">Initial Deposit</label>
         <input class="form-input" type="number" id="deposit" min="0" step="0.01" value="10000">
       </div>
@@ -235,11 +240,17 @@ nav {
       </div>
       <div class="form-group">
         <label class="form-label">Duration</label>
-        <select class="form-select" id="length">
+        <select class="form-select" id="length" onchange="toggleCustomDuration()">
           <option value="3">3 Months</option>
           <option value="6" selected>6 Months</option>
           <option value="12">12 Months</option>
+          <option value="custom">Custom...</option>
         </select>
+      </div>
+      <div class="form-group" id="customDurationField" style="display:none">
+        <label class="form-label">Custom Duration (months)</label>
+        <input class="form-input" type="number" id="customDuration" min="1" max="120" step="1" value="9">
+        <span class="form-hint">Any whole number of months</span>
       </div>
       <div class="form-divider"></div>
       <div class="form-group">
@@ -299,7 +310,57 @@ nav {
   </main>
 </div>
 
+<div id="exportSection" style="display:none; max-width:1200px; margin:0 auto; padding:48px 64px 80px">
+  <div style="border-top:1px solid #dedad4; padding-top:40px">
+    <div style="font-family:'Cormorant Garamond',serif; font-size:1.3rem; font-style:italic; color:#0e0e0c; margin-bottom:8px">Export to Firebase</div>
+    <p style="font-family:'EB Garamond',serif; font-size:0.85rem; color:#7a7670; margin-bottom:20px; line-height:1.7">
+      Copy the JSON below and paste it into your Firebase Realtime Database under <strong>clients / [clientId]</strong>.
+      The client dashboard reads this data and calculates all live values — progress, yield to date, days remaining — automatically from today's date.
+    </p>
+    <div style="position:relative">
+      <pre id="exportJson" style="background:#f2f0ec; border:1px solid #dedad4; padding:20px; font-family:monospace; font-size:11px; overflow-x:auto; white-space:pre-wrap; line-height:1.6; max-height:360px; overflow-y:auto; color:#0e0e0c"></pre>
+      <button onclick="copyExport()" id="copyBtn" style="position:absolute; top:12px; right:12px; font-family:'EB Garamond',serif; font-size:0.6rem; letter-spacing:0.16em; text-transform:uppercase; background:#0e0e0c; color:#f9f8f6; border:none; padding:7px 14px; cursor:pointer">Copy</button>
+    </div>
+    <button onclick="downloadExport()" style="font-family:'EB Garamond',serif; font-size:0.7rem; letter-spacing:0.2em; text-transform:uppercase; color:#f9f8f6; background:#0e0e0c; border:1px solid #0e0e0c; padding:13px 36px; cursor:pointer; margin-top:16px; border-radius:1px; transition:background 0.2s">Download JSON File</button>
+  </div>
+</div>
+
 <script>
+let _lastExport = null;
+
+function toggleCustomDuration() {
+  const sel = document.getElementById('length');
+  document.getElementById('customDurationField').style.display = sel.value === 'custom' ? 'flex' : 'none';
+}
+
+function addMonths(dateStr, months) {
+  if (!dateStr) return null;
+  const d = new Date(dateStr);
+  d.setDate(d.getDate() + months * 28);
+  return d.toISOString().split('T')[0];
+}
+
+function copyExport() {
+  if (!_lastExport) return;
+  navigator.clipboard.writeText(JSON.stringify(_lastExport, null, 2)).then(() => {
+    const btn = document.getElementById('copyBtn');
+    btn.textContent = 'Copied';
+    setTimeout(() => btn.textContent = 'Copy', 2000);
+  });
+}
+
+function downloadExport() {
+  if (!_lastExport) return;
+  const name = (_lastExport.clientName || 'client').toLowerCase().replace(/\s+/g, '-');
+  const blob = new Blob([JSON.stringify(_lastExport, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'bm-standard-' + name + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 Chart.defaults.color = '#7a7670';
 Chart.defaults.font.family = "'EB Garamond', Georgia, serif";
 Chart.defaults.font.size = 13;
@@ -382,10 +443,15 @@ const gaugeChart = new Chart(document.getElementById('gaugeChart'), {
 });
 
 function run() {
+  const clientName    = document.getElementById('clientName').value.trim() || 'Unknown Client';
   const deposit       = parseFloat(document.getElementById('deposit').value) || 0;
   const feePct        = parseFloat(document.getElementById('fee').value) || 0;
-  const months        = parseInt(document.getElementById('length').value) || 6;
+  const lengthSel     = document.getElementById('length').value;
+  const months        = lengthSel === 'custom'
+    ? parseInt(document.getElementById('customDuration').value) || 6
+    : parseInt(lengthSel) || 6;
   const yieldPct      = parseFloat(document.getElementById('yield').value) || 0;
+  const startDate     = document.getElementById('startDate').value;
   const settlementDays= parseInt(document.getElementById('settlementDays').value) || 0;
 
   if (deposit <= 0) return;
@@ -423,6 +489,12 @@ function run() {
 
   const totalYield    = balance - startingBalance;
   const totalReturnPct= ((balance - deposit) / deposit) * 100;
+
+  // Maturity date — computed before stats so it can be displayed
+  const maturityDate = addMonths(startDate, months);
+  const maturityFormatted = maturityDate
+    ? new Date(maturityDate + 'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})
+    : '—';
 
   // Update stacked chart
   stackedChart.data.labels = labels;
@@ -495,7 +567,42 @@ function run() {
       <div class="stat-label">Total Return on Deposit</div>
       <div class="stat-value green">${totalReturnPct.toFixed(2)}%</div>
     </div>
+    <div class="stat-item accent-item" style="grid-column:1/-1">
+      <div class="stat-label">Contract Maturity Date</div>
+      <div class="stat-value green">${maturityFormatted}</div>
+    </div>
   `;
+
+  // ── Generate export JSON ──
+  const annualYield  = yieldPct * 12;
+
+  _lastExport = {
+    contractType:    'standard',
+    clientName,
+    exportedAt:      new Date().toISOString().split('T')[0],
+    depositAmount:   deposit,
+    origFeeRate:     feePct,
+    origFee:         Math.round(deposit * (feePct / 100) * 100) / 100,
+    principal:       Math.round((deposit - deposit * (feePct / 100)) * 100) / 100,
+    startDate:       startDate || null,
+    termMonths:      months,
+    settlementDays,
+    maturityDate,
+    monthlyYieldRate: yieldPct,
+    annualYieldRate:  annualYield,
+    maturityValue:   Math.round(balance * 100) / 100,
+    totalYield:      Math.round(totalYield * 100) / 100,
+    totalReturnPct:  Math.round(totalReturnPct * 100) / 100,
+    weeklyChartData: {
+      labels,
+      principal: principals,
+      yieldLayer: yields
+    },
+    transactions: []
+  };
+
+  document.getElementById('exportJson').textContent = JSON.stringify(_lastExport, null, 2);
+  document.getElementById('exportSection').style.display = 'block';
 }
 
 document.getElementById('simForm').addEventListener('input', run);
