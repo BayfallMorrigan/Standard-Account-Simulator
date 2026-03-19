@@ -490,12 +490,6 @@ function run() {
   const totalYield    = balance - startingBalance;
   const totalReturnPct= ((balance - deposit) / deposit) * 100;
 
-  // Maturity date — computed before stats so it can be displayed
-  const maturityDate = addMonths(startDate, months);
-  const maturityFormatted = maturityDate
-    ? new Date(maturityDate + 'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})
-    : '—';
-
   // Update stacked chart
   stackedChart.data.labels = labels;
   stackedChart.data.datasets = [
@@ -569,11 +563,12 @@ function run() {
     </div>
     <div class="stat-item accent-item" style="grid-column:1/-1">
       <div class="stat-label">Contract Maturity Date</div>
-      <div class="stat-value green">${maturityFormatted}</div>
+      <div class="stat-value green">${startDate ? new Date(new Date(startDate + 'T12:00:00').getTime() + months*28*86400000).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—'}</div>
     </div>
   `;
 
   // ── Generate export JSON ──
+  const maturityDate = addMonths(startDate, months);
   const annualYield  = yieldPct * 12;
 
   _lastExport = {
